@@ -1,67 +1,58 @@
-import { useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
-import { AkpPlayer } from "@/components/AkpPlayer";
+import { useEffect, useState } from "react";
+import { useWatchHistory } from "@/hooks/useWatchHistory";
 
-export default function Watch() {
-  const [params, setParams] = useState<{
-    batchId: string;
-    subjectId: string;
-    childId: string;
-    title: string;
-  } | null>(null);
-  const backUrlRef = useRef("/");
-  const [, navigate] = useLocation();
+// learnbyakp.online shut down. vidcloud.eu.org's player fetches video via a
+// custom XHR + blob loader (not a plain .mpd/.m3u8 URL), and it also embeds
+// a nested testwave.cc iframe that refuses to load when double-framed inside
+// our own site. So instead of iframing, we do a full top-level redirect —
+// this matches exactly how it works when opened directly in the browser.
+const PLAYER_BASE = "https://vidcloud.eu.org/play.php";
+
+export default function ScheduleWatch() {
+  const { addToHistory } = useWatchHistory();
+  const [status, setStatus] = useState<"redirecting" | "invalid">("redirecting");
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
-    const batchId   = sp.get("batchId")  || "";
-    const subjectId = sp.get("subjectId") || "";
-    const topicId   = sp.get("topicId")  || "";
-    const childId   = sp.get("childId") || sp.get("videoId") || sp.get("ContentId") || "";
-    const title     = sp.get("title") || "";
+    const batchId    = sp.get("batchId") || "";
+    const subjectId  = sp.get("subjectId") || "";
+    const scheduleId = sp.get("scheduleId") || "";
+    const title      = sp.get("title") || sp.get("topic") || "Lecture Video";
+    const thumbnail  = sp.get("thumbnail") || "";
+    const topicId    = sp.get("topicId") || "";
 
-    // Build back URL
-    const backUrl = sp.get("backUrl");
-    if (backUrl) {
-      backUrlRef.current = backUrl;
-    } else if (batchId && subjectId && topicId) {
-      backUrlRef.current = `/batch/${batchId}/subject/${subjectId}/topic/${topicId}`;
-    } else if (batchId && subjectId) {
-      backUrlRef.current = `/batch/${batchId}/subject/${subjectId}`;
-    } else if (batchId) {
-      backUrlRef.current = `/batch/${batchId}`;
+    if (!batchId || !scheduleId) {
+      setStatus("invalid");
+      return;
     }
 
-    if (batchId && childId) {
-      setParams({ batchId, subjectId, childId, title });
-    }
-  }, []);
+    addToHistory({
+      scheduleId, batchId, subjectId, title,
+      thumbnail: thumbnail || undefined,
+      watchedAt: Date.now(),
+    });
 
-  // Back-navigation handler for the player header back button
-  useEffect(() => {
-    const onPopState = () => navigate(backUrlRef.current);
-    // The AkpPlayer calls window.history.back() — intercept popstate
-    // so we navigate within the SPA instead of leaving
-    return () => {};
-  }, [navigate]);
+    const playerUrl = `${PLAYER_BASE}?${new URLSearchParams({
+      batch_id: batchId,
+      subject_id: subjectId,
+      topic_id: topicId || scheduleId,
+      video_id: scheduleId,
+      video_name: title,
+      video_img: thumbnail,
+      video_type: "new",
+      play_type: "Lecture",
+    }).toString()}`;
 
-  if (!params) {
-    return (
-      <div style={{ position: "fixed", inset: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Missing video parameters</div>
-      </div>
-    );
-  }
+    window.location.replace(playerUrl);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000" }}>
-      <AkpPlayer
-        batchId={params.batchId}
-        subjectId={params.subjectId}
-        scheduleId={params.childId}
-        childId={params.childId}
-        title={params.title}
-      />
+    <div style={{
+      position: "fixed", inset: 0, background: "#000", display: "flex",
+      flexDirection: "column", alignItems: "center", justifyContent: "center",
+      color: "rgba(255,255,255,0.5)", fontSize: 14, gap: 12, textAlign: "center", padding: 16,
+    }}>
+      {status === "redirecting" ? "Opening video…" : "Invalid video parameters. Please go back and select a video."}
     </div>
   );
 }
