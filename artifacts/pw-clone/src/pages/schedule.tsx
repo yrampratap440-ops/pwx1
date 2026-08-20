@@ -86,30 +86,8 @@ function ScheduleCard({ item, batchName, now: _now }: ScheduleCardProps) {
   const teacherName: string = raw.teacherName || raw.teacher?.name || raw.instructorName || "";
   const meta = getSubjectMeta(subjectName);
 
-  const buildLiveSrcs = (): LiveSrcs => {
-    const title = item.data.topic.trim();
-    const akpParams = new URLSearchParams({
-      batch_id:    batchId,
-      subject_id:  subjectId,
-      video_id:    scheduleId,
-      schedule_id: scheduleId,
-      title,
-    });
-    const vcParams = new URLSearchParams({
-      batch_id:   batchId,
-      subject_id: subjectId,
-      topic_id:   topicId,
-      video_id:   scheduleId,
-      video_name: title,
-      video_img:  thumbUrl ?? "",
-      video_type: "live",
-      play_type:  "Lecture",
-    });
-    return {
-      akp:      `https://learnbyakp.online/study-v2/player?${akpParams.toString()}`,
-      vidcloud: `https://vidcloud.eu.org/play.php?${vcParams.toString()}`,
-    };
-  };
+  // NOTE: unused live-modal builder removed (buildLiveSrcs / LiveSrcs) —
+  // navigation goes straight to /watch via handleClick below.
 
   const handleClick = () => {
     if (!isVideo || status === "upcoming") return;
@@ -141,110 +119,106 @@ function ScheduleCard({ item, batchName, now: _now }: ScheduleCardProps) {
     : "border-border/40";
 
   return (
-    <>
-      {liveModal && <LivePlayerModal srcs={liveModal} title={item.data.topic.trim()} onClose={() => setLiveModal(null)} />}
+    <motion.div
+      initial={{ opacity: 0, x: 16 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      className={`relative flex-shrink-0 w-52 rounded-2xl border bg-card overflow-hidden transition-all select-none
+        ${cardBorder}
+        ${isVideo && status !== "upcoming" ? "cursor-pointer hover:scale-[1.02] active:scale-[0.99]" : ""}
+        ${status === "completed" ? "opacity-75" : ""}`}
+      onClick={handleClick}
+    >
+      {/* Live shimmer border */}
+      {status === "live" && (
+        <div className="absolute top-0 left-0 right-0 h-[2px] z-10 bg-gradient-to-r from-red-500 via-pink-400 to-red-500 animate-pulse" />
+      )}
 
-      <motion.div
-        initial={{ opacity: 0, x: 16 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, scale: 0.97 }}
-        className={`relative flex-shrink-0 w-52 rounded-2xl border bg-card overflow-hidden transition-all select-none
-          ${cardBorder}
-          ${isVideo && status !== "upcoming" ? "cursor-pointer hover:scale-[1.02] active:scale-[0.99]" : ""}
-          ${status === "completed" ? "opacity-75" : ""}`}
-        onClick={handleClick}
-      >
-        {/* Live shimmer border */}
-        {status === "live" && (
-          <div className="absolute top-0 left-0 right-0 h-[2px] z-10 bg-gradient-to-r from-red-500 via-pink-400 to-red-500 animate-pulse" />
+      {/* Thumbnail */}
+      <div className={`relative w-full h-40 overflow-hidden ${meta.bg}`}>
+        {/* Subject icon — always in background */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className={`w-20 h-20 rounded-2xl flex items-center justify-center ${meta.iconBg}`}>
+            {meta.iconEl}
+          </div>
+        </div>
+
+        {/* Real thumbnail on top */}
+        {thumbUrl && (
+          <img
+            src={thumbUrl}
+            alt={subjectName}
+            className="absolute inset-0 w-full h-full object-cover object-top"
+            onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
         )}
 
-        {/* Thumbnail */}
-        <div className={`relative w-full h-40 overflow-hidden ${meta.bg}`}>
-          {/* Subject icon — always in background */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className={`w-20 h-20 rounded-2xl flex items-center justify-center ${meta.iconBg}`}>
-              {meta.iconEl}
-            </div>
-          </div>
-
-          {/* Real thumbnail on top */}
-          {thumbUrl && (
-            <img
-              src={thumbUrl}
-              alt={subjectName}
-              className="absolute inset-0 w-full h-full object-cover object-top"
-              onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-            />
-          )}
-
-          {/* Bottom scrim */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pt-8 pb-2 px-3">
-            <p className="text-xs font-semibold text-white truncate drop-shadow">
-              {teacherName || subjectName}
-            </p>
-            {batchName && <p className="text-[10px] text-white/50 truncate">{batchName}</p>}
-          </div>
-
-          {/* Hover play */}
-          {isVideo && status !== "upcoming" && (
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 bg-black/25">
-              <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-2xl ${status === "live" ? "bg-red-500" : "bg-white/90"}`}>
-                {status === "live"
-                  ? <Radio className="w-5 h-5 text-white" />
-                  : <PlayCircle className="w-5 h-5 text-gray-900" />}
-              </div>
-            </div>
-          )}
+        {/* Bottom scrim */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pt-8 pb-2 px-3">
+          <p className="text-xs font-semibold text-white truncate drop-shadow">
+            {teacherName || subjectName}
+          </p>
+          {batchName && <p className="text-[10px] text-white/50 truncate">{batchName}</p>}
         </div>
 
-        {/* Card body */}
-        <div className="p-3 space-y-1.5">
-          {/* time-ago + status badge */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] text-muted-foreground">{timeAgo(item.data.startTime)}</span>
-            {isVideo && status === "live" && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white leading-none">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />Live
-              </span>
-            )}
-            {isVideo && status === "completed" && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground leading-none">
-                <CheckCircle2 className="w-2.5 h-2.5" />Ended
-              </span>
-            )}
-            {isVideo && status === "upcoming" && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 leading-none">
-                <Clock className="w-2.5 h-2.5" />Soon
-              </span>
-            )}
-            {!isVideo && (
-              <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border leading-none ${kindMeta.color}`}>
-                {kindMeta.icon}{kindMeta.label}
-              </span>
-            )}
+        {/* Hover play */}
+        {isVideo && status !== "upcoming" && (
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 bg-black/25">
+            <div className={`w-11 h-11 rounded-full flex items-center justify-center shadow-2xl ${status === "live" ? "bg-red-500" : "bg-white/90"}`}>
+              {status === "live"
+                ? <Radio className="w-5 h-5 text-white" />
+                : <PlayCircle className="w-5 h-5 text-gray-900" />}
+            </div>
           </div>
+        )}
+      </div>
 
-          {/* Bold title */}
-          <h3 className={`text-[13px] font-bold leading-snug line-clamp-2 ${status === "completed" ? "text-muted-foreground" : "text-foreground"}`}>
-            {item.data.topic.trim()}
-          </h3>
-
-          {/* Time range */}
-          <div className="flex items-center justify-between gap-2 pt-0.5">
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock className="w-2.5 h-2.5" />
-              {formatTime(item.data.startTime)} – {formatTime(item.data.endTime)}
+      {/* Card body */}
+      <div className="p-3 space-y-1.5">
+        {/* time-ago + status badge */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-muted-foreground">{timeAgo(item.data.startTime)}</span>
+          {isVideo && status === "live" && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white leading-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />Live
             </span>
-            {!isVideo && (
-              <button className="text-[10px] text-amber-400 underline cursor-pointer" onClick={handleMaterialOpen}>
-                Open
-              </button>
-            )}
-          </div>
+          )}
+          {isVideo && status === "completed" && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground leading-none">
+              <CheckCircle2 className="w-2.5 h-2.5" />Ended
+            </span>
+          )}
+          {isVideo && status === "upcoming" && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 leading-none">
+              <Clock className="w-2.5 h-2.5" />Soon
+            </span>
+          )}
+          {!isVideo && (
+            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border leading-none ${kindMeta.color}`}>
+              {kindMeta.icon}{kindMeta.label}
+            </span>
+          )}
         </div>
-      </motion.div>
-    </>
+
+        {/* Bold title */}
+        <h3 className={`text-[13px] font-bold leading-snug line-clamp-2 ${status === "completed" ? "text-muted-foreground" : "text-foreground"}`}>
+          {item.data.topic.trim()}
+        </h3>
+
+        {/* Time range */}
+        <div className="flex items-center justify-between gap-2 pt-0.5">
+          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Clock className="w-2.5 h-2.5" />
+            {formatTime(item.data.startTime)} – {formatTime(item.data.endTime)}
+          </span>
+          {!isVideo && (
+            <button className="text-[10px] text-amber-400 underline cursor-pointer" onClick={handleMaterialOpen}>
+              Open
+            </button>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
