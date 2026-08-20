@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTelegramGateSetting } from "@/hooks/useAdmin";
+import { useAccessGateSetting } from "@/hooks/useAdmin";
 import { apiUrl } from "@/lib/apiUrl";
 
 type Lang = "hi" | "en";
@@ -11,7 +11,7 @@ const t = {
     subtitle: (ch: string) => (
       <>
         Website use करने के लिए{" "}
-        <a
+        
           href={`https://t.me/${ch}`}
           target="_blank"
           rel="noopener noreferrer"
@@ -44,7 +44,7 @@ const t = {
     subtitle: (ch: string) => (
       <>
         To use this website, you must join the{" "}
-        <a
+        
           href={`https://t.me/${ch}`}
           target="_blank"
           rel="noopener noreferrer"
@@ -112,7 +112,7 @@ function getSavedSession(): { sessionId: string; botLink: string } | null {
 
 export function TelegramGate({ children }: { children: React.ReactNode }) {
   const { data: gateSetting, isLoading: gateLoading } =
-    useTelegramGateSetting();
+    useAccessGateSetting();
   const [lang, setLang] = useState<Lang>("en");
   const [auth, setAuth] = useState<StoredAuth | null>(getStoredAuth);
   const [step, setStep] = useState<Step>("join");
@@ -126,7 +126,6 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<Status>("idle");
 
-  // Create (or restore) a session
   const createSession = useCallback(async () => {
     setSessionLoading(true);
     try {
@@ -145,7 +144,6 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (auth) return;
-    // Only create a new session if we don't have one already
     if (!getSavedSession()) createSession();
   }, [auth, createSession]);
 
@@ -201,10 +199,8 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
     await createSession();
   }, [createSession]);
 
-  // Already verified — render app immediately, no loading needed
   if (auth) return <>{children}</>;
 
-  // While fetching the gate setting, show a neutral splash — never flash the gate UI
   if (gateLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
@@ -234,7 +230,6 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Gate disabled by admin — bypass entirely
   const gateEnabled = gateSetting?.value?.enabled ?? true;
   if (!gateEnabled) return <>{children}</>;
 
@@ -249,9 +244,7 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
         transition={{ duration: 0.4, ease: "easeOut" }}
         className="w-full max-w-sm"
       >
-        {/* Card */}
         <div className="bg-[#111118] border border-white/8 rounded-2xl p-8 shadow-2xl relative">
-          {/* Language toggle — top right */}
           <button
             onClick={() => setLang((l) => (l === "en" ? "hi" : "en"))}
             className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/6 hover:bg-white/10 border border-white/8 text-zinc-400 hover:text-white text-xs font-medium transition-all"
@@ -262,7 +255,6 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
             {lang === "en" ? "हिन्दी" : "English"}
           </button>
 
-          {/* Icon */}
           <div className="flex justify-center mb-6 mt-2">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0088cc] to-[#005fa3] flex items-center justify-center shadow-lg shadow-blue-900/30">
               <svg viewBox="0 0 24 24" className="w-8 h-8 fill-white">
@@ -287,7 +279,6 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
                   {tx.subtitle(CHANNEL)}
                 </p>
 
-                {/* Step 1 */}
                 <div className="flex items-start gap-3 mb-4 p-3 rounded-xl bg-white/4">
                   <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                     1
@@ -296,7 +287,7 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
                     <p className="text-white text-sm font-medium">
                       {tx.step1Title}
                     </p>
-                    <a
+                    
                       href={CHANNEL_URL}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -307,7 +298,6 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
 
-                {/* Step 2 */}
                 <div className="flex items-start gap-3 mb-6 p-3 rounded-xl bg-white/4">
                   <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                     2
@@ -356,7 +346,6 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
                   {tx.codeSub}
                 </p>
 
-                {/* Code input */}
                 <input
                   type="text"
                   inputMode="numeric"
@@ -371,7 +360,6 @@ export function TelegramGate({ children }: { children: React.ReactNode }) {
                   autoFocus
                 />
 
-                {/* Error messages */}
                 <AnimatePresence>
                   {status === "invalid_code" && (
                     <motion.p
