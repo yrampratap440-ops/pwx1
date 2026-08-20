@@ -93,7 +93,6 @@ export default function LiveWatch() {
 
     /* ── Case 3: nothing useful provided ─────────────────────────────── */
     setState({ kind: "no-url", backUrl });
-    return;
   }, []);
 
   /* ── Back handler ────────────────────────────────────────────────── */
